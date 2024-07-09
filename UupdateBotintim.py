@@ -13,9 +13,7 @@ USERNAMES_CHANNEL_ID = '2235641578'
 SOURCE_CHANNEL_ID = '2165228328' 
 
 OWNER_ID = '7302923565'
- 
 
-OWNER_ID = 'OWNER_ID'
 
 RESPONSE_PHOTOS = []
 RESPONSE_VIDEOS = []
@@ -49,6 +47,14 @@ async def start(update: Update, context: CallbackContext) -> None:
     if str(update.effective_user.id) not in users_data:
         users_data[str(update.effective_user.id)] = {"currency": 0, "referrals": []}
         save_users_data()
+
+    referrer_id = context.args[0] if context.args else None
+    if referrer_id and referrer_id != str(update.effective_user.id) and referrer_id in users_data:
+        users_data[referrer_id]["currency"] += 10
+        users_data[referrer_id]["referrals"].append(update.effective_user.id)
+        save_users_data()
+        await context.bot.send_message(chat_id=referrer_id, text=f"Вы получили 10 валюты за приглашение пользователя {update.effective_user.username}!")
+
     await update.message.reply_text("Привет! Я бот, который обменивает фото, видео и принимает юзернеймы если вы зотите лично обменять интимками с владельцем, просто ждите. Он вам напишет, а пока если хотите, то можете испробовать реферальную систему бота, для того что бы узнать больше напишите /referals")
 
 async def link(update: Update, context: CallbackContext) -> None:
@@ -120,16 +126,6 @@ async def referals(update: Update, context: CallbackContext) -> None:
         f"Ваша реферальная ссылка: {referral_link}"
     )
 
-async def handle_start_command(update: Update, context: CallbackContext) -> None:
-    if update.effective_user.id in BANNED_USERS:
-        return
-    referrer_id = context.args[0] if context.args else None
-    if referrer_id and referrer_id != str(update.effective_user.id) and referrer_id in users_data:
-        users_data[referrer_id]["currency"] += 10
-        users_data[referrer_id]["referrals"].append(update.effective_user.id)
-        save_users_data()
-        await context.bot.send_message(chat_id=referrer_id, text=f"Вы получили 10 валюты за приглашение пользователя {update.effective_user.username}!")
-
 def save_users_data():
     with open(USERS_DATA_FILE, "w") as f:
         json.dump(users_data, f)
@@ -168,18 +164,19 @@ def main() -> None:
     application.add_handler(CommandHandler("referals", referals))
     application.add_handler(CommandHandler("buy_photo", buy_photo))
     application.add_handler(CommandHandler("buy_video", buy_video))
-    application.add_handler(CommandHandler("start", handle_start_command))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^@'), handle_message))
     application.add_handler(MessageHandler(filters.PHOTO, handle_message))
     application.add_handler(MessageHandler(filters.VIDEO, handle_message))
 
     bot = application.bot
 
+    # Используем функцию `run_once` для загрузки медиафайлов при запуске
     async def fetch_media_files_job(context: CallbackContext) -> None:
         await fetch_media_files(bot)
 
     application.job_queue.run_once(fetch_media_files_job, when=0)
 
+    # Запуск бота
     application.run_polling()
 
 if __name__ == '__main__':
