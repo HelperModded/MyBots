@@ -12,7 +12,7 @@ MEDIA_CHANNEL_ID = '2165228328'
 USERNAMES_CHANNEL_ID = '2235641578'
 SOURCE_CHANNEL_ID = '2165228328' 
 
-OWNER_ID = 7302923565
+OWNER_ID = '7302923565'
 
 RESPONSE_PHOTOS = []
 RESPONSE_VIDEOS = []
@@ -172,6 +172,14 @@ def main() -> None:
 
     bot = application.bot
 
-    application.job_queue.run_once(lambda _: fetch_media_files(bot), when=0)
+    # Используем функцию `run_once` для загрузки медиафайлов при запуске
+    async def fetch_media_files_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+        await fetch_media_files(bot)
 
-    application.run
+    application.job_queue.run_once(fetch_media_files_job, when=0)
+
+    # Запуск бота
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
