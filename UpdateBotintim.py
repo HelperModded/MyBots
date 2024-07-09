@@ -13,6 +13,9 @@ USERNAMES_CHANNEL_ID = '2235641578'
 SOURCE_CHANNEL_ID = '2165228328' 
 
 OWNER_ID = '7302923565'
+ 
+
+OWNER_ID = 'OWNER_ID'
 
 RESPONSE_PHOTOS = []
 RESPONSE_VIDEOS = []
@@ -165,16 +168,19 @@ def main() -> None:
     application.add_handler(CommandHandler("referals", referals))
     application.add_handler(CommandHandler("buy_photo", buy_photo))
     application.add_handler(CommandHandler("buy_video", buy_video))
-    application.add_handler(CommandHandler("start", handle_start_command, pass_args=True))
+    application.add_handler(CommandHandler("start", handle_start_command))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^@'), handle_message))
     application.add_handler(MessageHandler(filters.PHOTO, handle_message))
     application.add_handler(MessageHandler(filters.VIDEO, handle_message))
 
     bot = application.bot
+
     async def fetch_media_files_job(context: CallbackContext) -> None:
         await fetch_media_files(bot)
+
     application.job_queue.run_once(fetch_media_files_job, when=0)
 
     application.run_polling()
+
 if __name__ == '__main__':
     main()
