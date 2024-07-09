@@ -1,5 +1,5 @@
-from telegram import Update, Bot
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import Update, Bot, PhotoSize, Video
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackContext
 import logging
 import random
 import json
@@ -40,7 +40,7 @@ async def fetch_media_files(bot: Bot):
             if file_id not in RESPONSE_VIDEOS:
                 RESPONSE_VIDEOS.append(file_id)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def start(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id in BANNED_USERS:
         return
     if str(update.effective_user.id) not in users_data:
@@ -48,7 +48,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         save_users_data()
     await update.message.reply_text("Привет! Я бот, который обменивает фото, видео и принимает юзернеймы если вы зотите лично обменять интимками с владельцем, просто ждите. Он вам напишет, а пока если хотите, то можете испробовать реферальную систему бота, для того что бы узнать больше напишите /referals")
 
-async def link(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def link(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id in BANNED_USERS:
         return
     user_username = update.effective_user.username
@@ -58,7 +58,7 @@ async def link(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         await update.message.reply_text("У вас нет юзернейма")
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_message(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id in BANNED_USERS:
         return
     if update.message.text and update.message.text.startswith('@'):
@@ -88,7 +88,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         else:
             await update.message.reply_text("Это видео уже есть в базе данных, поищите ещё")
 
-async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def ban_user(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id != OWNER_ID:
         await update.message.reply_text("У вас нет прав на использование этой команды.")
         return
@@ -106,7 +106,7 @@ async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as e:
         await update.message.reply_text(f"Не удалось забанить пользователя {context.args[0]}. Ошибка: {e}")
 
-async def referals(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def referals(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id in BANNED_USERS:
         return
     referral_link = f"https://t.me/{context.bot.username}?start={update.effective_user.id}"
@@ -117,7 +117,7 @@ async def referals(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"Ваша реферальная ссылка: {referral_link}"
     )
 
-async def handle_start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_start_command(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id in BANNED_USERS:
         return
     referrer_id = context.args[0] if context.args else None
@@ -131,7 +131,7 @@ def save_users_data():
     with open(USERS_DATA_FILE, "w") as f:
         json.dump(users_data, f)
 
-async def buy_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def buy_photo(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     if user_id in users_data and users_data[user_id]["currency"] >= 1:
         users_data[user_id]["currency"] -= 1
@@ -144,7 +144,7 @@ async def buy_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         await update.message.reply_text("У вас недостаточно валюты для покупки фото")
 
-async def buy_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def buy_video(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     if user_id in users_data and users_data[user_id]["currency"] >= 2:
         users_data[user_id]["currency"] -= 2
@@ -171,15 +171,10 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.VIDEO, handle_message))
 
     bot = application.bot
-
-    # Используем функцию `run_once` для загрузки медиафайлов при запуске
-    async def fetch_media_files_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def fetch_media_files_job(context: CallbackContext) -> None:
         await fetch_media_files(bot)
-
     application.job_queue.run_once(fetch_media_files_job, when=0)
 
-    # Запуск бота
     application.run_polling()
-
 if __name__ == '__main__':
     main()
